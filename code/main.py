@@ -1,8 +1,17 @@
-from google.appengine.ext import ndb
-from webapp2_extras import json
 import cgi
 import urllib
 import webapp2
+import jinja2
+import os
+from google.appengine.ext import ndb
+from webapp2_extras import json
+from google.appengine.ext.webapp.util import login_required
+from google.appengine.api import users
+
+JINJA_ENVIRONMENT = jinja2.Environment(
+loader=jinja2.FileSystemLoader(os.path.dirname(__file__)),
+    extensions=['jinja2.ext.autoescape'],
+    autoescape=True)
 
 class DogWalker(ndb.Model):
     name = ndb.StringProperty()
@@ -62,7 +71,6 @@ class DeleteRequest(webapp2.RequestHandler):
         request.key.delete();
         return self.response.out.write(request_id)
 
-
 class GetAllData(webapp2.RequestHandler):
     def get(self):
         self.response.headers['Content-Type'] = 'application/json'
@@ -71,6 +79,16 @@ class GetAllData(webapp2.RequestHandler):
             'walkers': [walker.to_json() for walker in DogWalker.query()],
             'requests': [request.to_json() for request in WalkRequest.query()],
         }
+
+class Greet(webapp2.RequestHandler):
+	@login_required
+	def get(self):
+        JINJA_ENVIRONMENT.get_template("index.html")
+		    user = users.get_current_user()
+            params = {
+                'nickname': user.nickname()
+            }
+		self.response.write(template.render(params))
         return self.response.out.write(json.encode(data))
 
 
@@ -80,4 +98,5 @@ app = webapp2.WSGIApplication([
     ('/create/request', CreateRequest),
     ('/delete/request', DeleteRequest),
     ('/get', GetAllData),
+    ('/', Greet),
 ])
